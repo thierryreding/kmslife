@@ -13,12 +13,11 @@
 
 static const char DEFAULT_DEVICE[] = "/dev/dri/card0";
 
-#define KMSLIFE_SCALE 2
-
 struct grid {
 	unsigned int width;
 	unsigned int pitch;
 	unsigned int height;
+	unsigned int scale;
 
 	void *parents;
 	void *cells;
@@ -40,21 +39,21 @@ static inline unsigned int wrap(int i, unsigned int max)
 	return i;
 }
 
-static struct grid *grid_new(unsigned int width, unsigned int height)
+static struct grid *grid_new(unsigned int width, unsigned int height,
+			     unsigned int scale)
 {
-	unsigned int pitch = DIV_ROUND_UP(width, 8);
-	size_t size = pitch * height;
+	unsigned int pitch = DIV_ROUND_UP(width / scale, 8);
+	size_t size = pitch * height / scale;
 	struct grid *grid;
-
-	printf("grid: (%u, %u): %u, %zu\n", width, height, pitch, size);
 
 	grid = calloc(1, sizeof(*grid));
 	if (!grid)
 		return NULL;
 
-	grid->width = width;
+	grid->width = width / scale;
 	grid->pitch = pitch;
-	grid->height = height;
+	grid->height = height / scale;
+	grid->scale = scale;
 
 	grid->cells = calloc(1, size);
 	if (!grid->cells) {
@@ -155,11 +154,11 @@ static void grid_draw(struct grid *grid, struct screen *screen)
 
 	for (y = 0; y < grid->height; y++) {
 		uint8_t *cells = grid->cells + grid_row_offset(grid, y);
-		uint32_t *ptr[KMSLIFE_SCALE];
+		uint32_t *ptr[grid->scale];
 		unsigned int i, j;
 
-		for (i = 0; i < KMSLIFE_SCALE; i++)
-			ptr[i] = surface + (y * KMSLIFE_SCALE + i) *
+		for (i = 0; i < grid->scale; i++)
+			ptr[i] = surface + (y * grid->scale + i) *
 				 fb->bo->pitch;
 
 		for (x = 0; x < grid->width; x++) {
@@ -170,9 +169,9 @@ static void grid_draw(struct grid *grid, struct screen *screen)
 			else
 				color = 0x00000000;
 
-			for (j = 0; j < KMSLIFE_SCALE; j++)
-				for (i = 0; i < KMSLIFE_SCALE; i++)
-					ptr[j][x * KMSLIFE_SCALE + i] = color;
+			for (j = 0; j < grid->scale; j++)
+				for (i = 0; i < grid->scale; i++)
+					ptr[j][x * grid->scale + i] = color;
 		}
 	}
 
@@ -273,19 +272,21 @@ int main(int argc, char *argv[])
 		{ "help", 0, NULL, 'h' },
 		{ "pentomino", 0, NULL, 'p' },
 		{ "seed", 1, NULL, 's' },
+		{ "scale", 1, NULL, 'S' },
 		{ NULL, 0, NULL, 0 },
 	};
+	static const char opts[] = "dghps:S:";
 	unsigned int seed = time(NULL);
 	enum pattern pattern = RANDOM;
+	unsigned int gen, scale = 1;
 	struct screen *screen;
 	struct sigaction sa;
 	const char *device;
 	bool help = false;
 	struct grid *grid;
-	unsigned int gen;
 	int fd, err, opt;
 
-	while ((opt = getopt_long(argc, argv, "dghps:", options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, opts, options, NULL)) != -1) {
 		switch (opt) {
 		case 'd':
 			pattern = DIE_HARD;
@@ -305,6 +306,14 @@ int main(int argc, char *argv[])
 
 		case 's':
 			seed = strtoul(optarg, NULL, 0);
+			break;
+
+		case 'S':
+			scale = strtoul(optarg, NULL, 0);
+			if (!scale) {
+				fprintf(stderr, "invalid scale: %s\n", optarg);
+				return 1;
+			}
 			break;
 
 		default:
@@ -335,7 +344,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	grid = grid_new(screen->width / KMSLIFE_SCALE, screen->height / KMSLIFE_SCALE);
+	grid = grid_new(screen->width, screen->height, scale);
 	if (!grid) {
 		fprintf(stderr, "grid_new() failed\n");
 		return 1;
