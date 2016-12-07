@@ -358,6 +358,7 @@ int main(int argc, char *argv[])
 	const char *device;
 	bool help = false;
 	struct grid *grid;
+	unsigned int x, y;
 	int fd, err, opt;
 
 	while ((opt = getopt_long(argc, argv, opts, options, NULL)) != -1) {
@@ -436,29 +437,32 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	x = grid->width / 2;
+	y = grid->height / 2;
+
 	switch (pattern) {
 	case RANDOM:
 		grid_randomize(grid, seed);
 		break;
 
 	case DIE_HARD:
-		grid_add_diehard(grid, grid->width / 2, grid->height / 2);
+		grid_add_diehard(grid, x, y);
 		break;
 
 	case GLIDER:
-		grid_add_glider(grid, grid->width / 2, grid->height / 2);
+		grid_add_glider(grid, x, y);
 		break;
 
 	case PENTOMINO:
-		grid_add_pentomino(grid, grid->width / 2, grid->height / 2);
+		grid_add_pentomino(grid, x, y);
 		break;
 
 	case GUN:
-		grid_add_gun(grid, grid->width / 2, grid->height / 2);
+		grid_add_gun(grid, x, y);
 		break;
 
 	case ACORN:
-		grid_add_acorn(grid, grid->width / 2, grid->height / 2);
+		grid_add_acorn(grid, x, y);
 		break;
 	}
 
