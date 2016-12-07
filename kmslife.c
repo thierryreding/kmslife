@@ -316,6 +316,7 @@ static void usage(FILE *fp, const char *program)
 	fprintf(fp, "options:\n");
 	fprintf(fp, "  -a, --acorn	start with acorn element\n");
 	fprintf(fp, "  -d, --die-hard	start with die-hard element\n");
+	fprintf(fp, "  -f, --framerate	set framerate\n");
 	fprintf(fp, "  -g, --glider	start with glider element\n");
 	fprintf(fp, "  -G, --gun	start with glider gun\n");
 	fprintf(fp, "  -h, --help	display this help screen and exit\n");
@@ -338,6 +339,7 @@ int main(int argc, char *argv[])
 	static const struct option options[] = {
 		{ "acorn", 0, NULL, 'a' },
 		{ "die-hard", 0, NULL, 'd' },
+		{ "framerate", 1, NULL, 'f' },
 		{ "glider", 0, NULL, 'g' },
 		{ "gun", 0, NULL, 'G' },
 		{ "help", 0, NULL, 'h' },
@@ -346,10 +348,11 @@ int main(int argc, char *argv[])
 		{ "scale", 1, NULL, 'S' },
 		{ NULL, 0, NULL, 0 },
 	};
-	static const char opts[] = "adgGhps:S:";
+	static const char opts[] = "adf:gGhps:S:";
 	unsigned int seed = time(NULL);
 	enum pattern pattern = RANDOM;
 	unsigned int gen, scale = 1;
+	unsigned int framerate = 60;
 	struct screen *screen;
 	struct sigaction sa;
 	const char *device;
@@ -365,6 +368,10 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			pattern = DIE_HARD;
+			break;
+
+		case 'f':
+			framerate = strtoul(optarg, NULL, 0);
 			break;
 
 		case 'g':
@@ -460,7 +467,9 @@ int main(int argc, char *argv[])
 	sigaction(SIGINT, &sa, NULL);
 
 	while (!done) {
-		grid_tick(grid);
+		if (framerate > 0)
+			grid_tick(grid);
+
 		grid_draw(grid, screen);
 		screen_swap(screen);
 		grid_swap(grid);
