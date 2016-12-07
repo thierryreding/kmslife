@@ -236,6 +236,60 @@ static void grid_add_diehard(struct grid *grid, unsigned int x,
 	grid_add_cell(grid, x + 7, y + 2);
 }
 
+static void grid_add_gun(struct grid *grid, unsigned int x, unsigned int y)
+{
+	grid_add_cell(grid, x +  0, y + 0);
+	grid_add_cell(grid, x +  1, y + 0);
+	grid_add_cell(grid, x +  0, y + 1);
+	grid_add_cell(grid, x +  1, y + 1);
+
+	grid_add_cell(grid, x + 10, y + 0);
+	grid_add_cell(grid, x + 10, y + 1);
+	grid_add_cell(grid, x + 10, y + 2);
+
+	grid_add_cell(grid, x + 11, y - 1);
+	grid_add_cell(grid, x + 11, y + 3);
+
+	grid_add_cell(grid, x + 12, y - 2);
+	grid_add_cell(grid, x + 12, y + 4);
+
+	grid_add_cell(grid, x + 13, y - 2);
+	grid_add_cell(grid, x + 13, y + 4);
+
+	grid_add_cell(grid, x + 14, y + 1);
+
+	grid_add_cell(grid, x + 15, y - 1);
+	grid_add_cell(grid, x + 15, y + 3);
+
+	grid_add_cell(grid, x + 16, y + 0);
+	grid_add_cell(grid, x + 16, y + 1);
+	grid_add_cell(grid, x + 16, y + 2);
+
+	grid_add_cell(grid, x + 17, y + 1);
+
+	grid_add_cell(grid, x + 20, y + 0);
+	grid_add_cell(grid, x + 20, y - 1);
+	grid_add_cell(grid, x + 20, y - 2);
+
+	grid_add_cell(grid, x + 21, y + 0);
+	grid_add_cell(grid, x + 21, y - 1);
+	grid_add_cell(grid, x + 21, y - 2);
+
+	grid_add_cell(grid, x + 22, y - 3);
+	grid_add_cell(grid, x + 22, y + 1);
+
+	grid_add_cell(grid, x + 24, y - 4);
+	grid_add_cell(grid, x + 24, y - 3);
+	grid_add_cell(grid, x + 24, y + 1);
+	grid_add_cell(grid, x + 24, y + 2);
+
+	grid_add_cell(grid, x + 34, y - 2);
+	grid_add_cell(grid, x + 34, y - 1);
+
+	grid_add_cell(grid, x + 35, y - 2);
+	grid_add_cell(grid, x + 35, y - 1);
+}
+
 static bool done = false;
 
 static void signal_handler(int signum)
@@ -251,6 +305,7 @@ static void usage(FILE *fp, const char *program)
 	fprintf(fp, "options:\n");
 	fprintf(fp, "  -d, --die-hard	start with die-hard element\n");
 	fprintf(fp, "  -g, --glider	start with glider element\n");
+	fprintf(fp, "  -G, --gun	start with glider gun\n");
 	fprintf(fp, "  -h, --help	display this help screen and exit\n");
 	fprintf(fp, "  -p, --pentomino	start with r-pentomino element\n");
 	fprintf(fp, "  -s, --seed	initial random seed\n");
@@ -262,6 +317,7 @@ enum pattern {
 	DIE_HARD,
 	GLIDER,
 	PENTOMINO,
+	GUN,
 };
 
 int main(int argc, char *argv[])
@@ -269,13 +325,14 @@ int main(int argc, char *argv[])
 	static const struct option options[] = {
 		{ "die-hard", 0, NULL, 'd' },
 		{ "glider", 0, NULL, 'g' },
+		{ "gun", 0, NULL, 'G' },
 		{ "help", 0, NULL, 'h' },
 		{ "pentomino", 0, NULL, 'p' },
 		{ "seed", 1, NULL, 's' },
 		{ "scale", 1, NULL, 'S' },
 		{ NULL, 0, NULL, 0 },
 	};
-	static const char opts[] = "dghps:S:";
+	static const char opts[] = "dgGhps:S:";
 	unsigned int seed = time(NULL);
 	enum pattern pattern = RANDOM;
 	unsigned int gen, scale = 1;
@@ -294,6 +351,10 @@ int main(int argc, char *argv[])
 
 		case 'g':
 			pattern = GLIDER;
+			break;
+
+		case 'G':
+			pattern = GUN;
 			break;
 
 		case 'h':
@@ -365,6 +426,10 @@ int main(int argc, char *argv[])
 
 	case PENTOMINO:
 		grid_add_pentomino(grid, grid->width / 2, grid->height / 2);
+		break;
+
+	case GUN:
+		grid_add_gun(grid, grid->width / 2, grid->height / 2);
 		break;
 	}
 
