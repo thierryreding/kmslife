@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
@@ -301,6 +302,74 @@ static void grid_add_acorn(struct grid *grid, unsigned int x, unsigned int y)
 	grid_add_cell(grid, x + 6, y + 0);
 }
 
+static int grid_load_rle(struct grid *grid, const char *filename,
+			 unsigned int x, unsigned int y)
+{
+	unsigned int width = 0, height = 0, s = 0, t = 0;
+	char *line = NULL, *rule = NULL, *end, *ptr;
+	unsigned long count;
+	size_t len = 0, i;
+	ssize_t num;
+	FILE *fp;
+
+	fp = fopen(filename, "r");
+	if (!fp)
+		return -errno;
+
+	while ((num = getline(&line, &len, fp)) != -1) {
+		if (line[0] == '#') {
+			printf("comment: %s", line);
+			continue;
+		}
+
+		if (line[0] == 'x') {
+			sscanf(line, "x = %u, y = %u, rule = %ms", &width,
+			       &height, &rule);
+			printf("size: %ux%u\n", width, height);
+			printf("rule: %s\n", rule);
+			free(rule);
+			continue;
+		}
+
+		line[num - 1] = '\0';
+		ptr = line;
+		end = NULL;
+
+		while (*ptr) {
+			printf("| %s\n", ptr);
+
+			count = strtoul(ptr, &end, 10);
+			if (end == ptr)
+				count = 1;
+
+			ptr = end;
+
+			switch (*ptr) {
+			case 'o':
+				for (i = 0; i < count; i++)
+					grid_add_cell(grid, x + s + i, y + t);
+
+				s += count;
+				break;
+
+			case 'b':
+				s += count;
+				break;
+
+			case '$':
+				t += count;
+				s = 0;
+				break;
+			}
+
+			ptr++;
+		}
+	}
+
+	fclose(fp);
+	return 0;
+}
+
 static bool done = false;
 
 static void signal_handler(int signum)
@@ -317,6 +386,7 @@ static void usage(FILE *fp, const char *program)
 	fprintf(fp, "  -a, --acorn	start with acorn element\n");
 	fprintf(fp, "  -d, --die-hard	start with die-hard element\n");
 	fprintf(fp, "  -f, --framerate	set framerate\n");
+	fprintf(fp, "  -F, --file	start with element from file\n");
 	fprintf(fp, "  -g, --glider	start with glider element\n");
 	fprintf(fp, "  -G, --gun	start with glider gun\n");
 	fprintf(fp, "  -h, --help	display this help screen and exit\n");
@@ -340,6 +410,7 @@ int main(int argc, char *argv[])
 		{ "acorn", 0, NULL, 'a' },
 		{ "die-hard", 0, NULL, 'd' },
 		{ "framerate", 1, NULL, 'f' },
+		{ "file", 1, NULL, 'F' },
 		{ "glider", 0, NULL, 'g' },
 		{ "gun", 0, NULL, 'G' },
 		{ "help", 0, NULL, 'h' },
@@ -348,11 +419,12 @@ int main(int argc, char *argv[])
 		{ "scale", 1, NULL, 'S' },
 		{ NULL, 0, NULL, 0 },
 	};
-	static const char opts[] = "adf:gGhps:S:";
+	static const char opts[] = "adf:F:gGhps:S:";
 	unsigned int seed = time(NULL);
 	enum pattern pattern = RANDOM;
 	unsigned int gen, scale = 1;
 	unsigned int framerate = 60;
+	const char *filename = NULL;
 	struct screen *screen;
 	struct sigaction sa;
 	const char *device;
@@ -373,6 +445,10 @@ int main(int argc, char *argv[])
 
 		case 'f':
 			framerate = strtoul(optarg, NULL, 0);
+			break;
+
+		case 'F':
+			filename = optarg;
 			break;
 
 		case 'g':
@@ -440,30 +516,38 @@ int main(int argc, char *argv[])
 	x = grid->width / 2;
 	y = grid->height / 2;
 
-	switch (pattern) {
-	case RANDOM:
-		grid_randomize(grid, seed);
-		break;
+	if (filename) {
+		err = grid_load_rle(grid, filename, x, y);
+		if (err < 0) {
+			fprintf(stderr, "grid_load_rle() failed: %d\n", err);
+			return 1;
+		}
+	} else {
+		switch (pattern) {
+		case RANDOM:
+			grid_randomize(grid, seed);
+			break;
 
-	case DIE_HARD:
-		grid_add_diehard(grid, x, y);
-		break;
+		case DIE_HARD:
+			grid_add_diehard(grid, x, y);
+			break;
 
-	case GLIDER:
-		grid_add_glider(grid, x, y);
-		break;
+		case GLIDER:
+			grid_add_glider(grid, x, y);
+			break;
 
-	case PENTOMINO:
-		grid_add_pentomino(grid, x, y);
-		break;
+		case PENTOMINO:
+			grid_add_pentomino(grid, x, y);
+			break;
 
-	case GUN:
-		grid_add_gun(grid, x, y);
-		break;
+		case GUN:
+			grid_add_gun(grid, x, y);
+			break;
 
-	case ACORN:
-		grid_add_acorn(grid, x, y);
-		break;
+		case ACORN:
+			grid_add_acorn(grid, x, y);
+			break;
+		}
 	}
 
 	memset(&sa, 0, sizeof(sa));
