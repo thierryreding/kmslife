@@ -290,6 +290,17 @@ static void grid_add_gun(struct grid *grid, unsigned int x, unsigned int y)
 	grid_add_cell(grid, x + 35, y - 1);
 }
 
+static void grid_add_acorn(struct grid *grid, unsigned int x, unsigned int y)
+{
+	grid_add_cell(grid, x + 0, y + 0);
+	grid_add_cell(grid, x + 1, y + 0);
+	grid_add_cell(grid, x + 1, y - 2);
+	grid_add_cell(grid, x + 3, y - 1);
+	grid_add_cell(grid, x + 4, y + 0);
+	grid_add_cell(grid, x + 5, y + 0);
+	grid_add_cell(grid, x + 6, y + 0);
+}
+
 static bool done = false;
 
 static void signal_handler(int signum)
@@ -303,6 +314,7 @@ static void usage(FILE *fp, const char *program)
 	fprintf(fp, "usage: %s [options] DEVICE\n", program);
 	fprintf(fp, "\n");
 	fprintf(fp, "options:\n");
+	fprintf(fp, "  -a, --acorn	start with acorn element\n");
 	fprintf(fp, "  -d, --die-hard	start with die-hard element\n");
 	fprintf(fp, "  -g, --glider	start with glider element\n");
 	fprintf(fp, "  -G, --gun	start with glider gun\n");
@@ -318,11 +330,13 @@ enum pattern {
 	GLIDER,
 	PENTOMINO,
 	GUN,
+	ACORN,
 };
 
 int main(int argc, char *argv[])
 {
 	static const struct option options[] = {
+		{ "acorn", 0, NULL, 'a' },
 		{ "die-hard", 0, NULL, 'd' },
 		{ "glider", 0, NULL, 'g' },
 		{ "gun", 0, NULL, 'G' },
@@ -332,7 +346,7 @@ int main(int argc, char *argv[])
 		{ "scale", 1, NULL, 'S' },
 		{ NULL, 0, NULL, 0 },
 	};
-	static const char opts[] = "dgGhps:S:";
+	static const char opts[] = "adgGhps:S:";
 	unsigned int seed = time(NULL);
 	enum pattern pattern = RANDOM;
 	unsigned int gen, scale = 1;
@@ -345,6 +359,10 @@ int main(int argc, char *argv[])
 
 	while ((opt = getopt_long(argc, argv, opts, options, NULL)) != -1) {
 		switch (opt) {
+		case 'a':
+			pattern = ACORN;
+			break;
+
 		case 'd':
 			pattern = DIE_HARD;
 			break;
@@ -430,6 +448,10 @@ int main(int argc, char *argv[])
 
 	case GUN:
 		grid_add_gun(grid, grid->width / 2, grid->height / 2);
+		break;
+
+	case ACORN:
+		grid_add_acorn(grid, grid->width / 2, grid->height / 2);
 		break;
 	}
 
